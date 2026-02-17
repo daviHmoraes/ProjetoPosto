@@ -2,11 +2,8 @@ package services;
 
 import dao.CombustivelDAO;
 import dao.TanqueDAO;
-import exceptions.CapacidadeInvalidaAltaException;
-import exceptions.CapacidadeInvalidaBaixaException;
-import exceptions.CombustivelNaoEncontradoException;
-import exceptions.NomeVazioException;
-import exceptions.TanqueNaoEncontradoException;
+import exceptions.*;
+
 import java.math.BigDecimal;
 import java.util.List;
 import model.Combustivel;
@@ -18,6 +15,12 @@ public class TanqueService {
     private final CombustivelDAO combustivelDAO = new CombustivelDAO();
     private final BigDecimal CAPACIDADE_MINIMA = new BigDecimal("0.1");
     private final BigDecimal CAPACIDADE_MAXIMA = new BigDecimal("60000.00");
+
+    private void validarNomeNulo(String nome) {
+        if (nome == null) {
+            throw new NomeNuloException();
+        }
+    }
 
     public Tanque inserirTanque(String nome, BigDecimal capacidadeMax, int combustivelId) {
 
@@ -52,16 +55,60 @@ public class TanqueService {
         return tanqueDAO.readAll();
     }
 
-    public void atualizarLitros(int id, BigDecimal litros){
+    public void debitarLitros(int id, BigDecimal litros){
+
+        if (litros.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new QuantidadeLitrosInvalidaException(litros);
+        }
 
         Tanque tanque = tanqueDAO.findById(id);
 
         if (tanque == null) {
             throw new TanqueNaoEncontradoException(id);
-        } 
+        }
 
-        
+        BigDecimal novoLitrosAtuais = tanque.getLitrosAtuais().subtract(litros);
+
+        if (novoLitrosAtuais.compareTo(BigDecimal.ZERO) < 0) {
+            throw new CombustivelInsuficienteException(litros);
+        }
+
+        tanqueDAO.updateLitrosAtuais(id, novoLitrosAtuais);
 
     }
-    
+
+    public void creditarLitros(int id, BigDecimal litros) {
+
+        if (litros.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new QuantidadeLitrosInvalidaException(litros);
+        }
+
+        Tanque tanque = tanqueDAO.findById(id);
+
+        if (tanque == null) {
+            throw new TanqueNaoEncontradoException(id);
+        }
+
+        BigDecimal novoLitrosAtuais = tanque.getLitrosAtuais().add(litros);
+
+        if (novoLitrosAtuais.compareTo(tanque.getCapacidadeMax()) > 0) {
+            throw new CapacidadeInvalidaAltaException(tanque.getCapacidadeMax());
+        }
+
+        tanqueDAO.updateLitrosAtuais(id, novoLitrosAtuais);
+
+    }
+
+    public void deletarTanque(int id) {
+
+        Tanque tanque = tanqueDAO.findById(id);
+
+        if (tanque == null) {
+            throw new TanqueNaoEncontradoException(id);
+        }
+
+        tanqueDAO.delete(id);
+
+    }
+
 }

@@ -15,17 +15,22 @@ public class BombaDAO {
     // │──────────── INSERIR ────────────│
     public void insert(Bomba bomba) {
 
-        String sql = "INSERT INTO bomba (identificacao, combustivel_id, tanque_id, status) VALUES (?,?,?,?)";
+        String sql = "INSERT INTO bomba (identificacao, combustivel_id, tanque_id) VALUES (?,?,?)";
 
         try(Connection conn = Conexao.getConnection();
-            PreparedStatement ps = conn.prepareStatement(sql)) {
+            PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
 
             ps.setString(1, bomba.getIdentificacao());
             ps.setInt(2, bomba.getCombustivelId());
             ps.setInt(3, bomba.getTanqueId());
-            ps.setString(4, bomba.getStatus().name());
 
             ps.executeUpdate();
+
+            try(ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    bomba.setId(rs.getInt(1));
+                }
+            }
 
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao inserir nova bomba!", e);
@@ -33,7 +38,7 @@ public class BombaDAO {
     }
 
     // │──────────── BUSCAR POR ID ────────────│
-    public Bomba readId(int id) {
+    public Bomba findById(int id) {
         String sql = "SELECT * FROM bomba WHERE id = ?";
         Bomba bomba = null;
 
